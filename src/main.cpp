@@ -28,6 +28,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 
 unsigned int loadCubemap(vector<std::string> faces);
 
+unsigned int loadTexture(char const * path);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -178,9 +179,12 @@ int main() {
 
     // build and compile shaders
     // -------------------------
+
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
     Shader skybox_shader("resources/shaders/skybox.vs","resources/shaders/skybox.fs");
     Shader shadow_point("resources/shaders/shadow.vs","resources/shaders/shadow.fs","resources/shaders/geometryshader.gs");
+    Shader floor("resources/shaders/floor.vs","resources/shaders/floor.fs");
+
 
     float skyboxVertices[] = {
             // positions
@@ -238,11 +242,42 @@ int main() {
 
 
 
+    //plane
+
+    float planeVertices[] = {
+            // positions          // texture Coords
+            5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
+            -5.0f, -0.5f,  5.0f,  0.0f, 0.0f,
+            -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
+
+            5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
+            -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
+            5.0f, -0.5f, -5.0f,  2.0f, 2.0f
+    };
+
+    unsigned int planeVAO, planeVBO;
+    glGenVertexArrays(1, &planeVAO);
+    glGenBuffers(1, &planeVBO);
+    glBindVertexArray(planeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), &planeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+
+
+
+    //end plane
+
     // load models
     // -----------
+
+
     Model ourModel("resources/objects/camp_fire/Campfire OBJ.obj");
     ourModel.SetShaderTextureNamePrefix("material.");
-
+    Model planina("resources/objects/mountain/mount.blend1.obj");
+    planina.SetShaderTextureNamePrefix("material.");
 
     //ovde se priprema deapthmap
 
@@ -275,19 +310,19 @@ int main() {
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(4.0f, 4.0, 1.0);
-    pointLight.ambient = glm::vec3(0.8);
-    pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
-    pointLight.specular = glm::vec3(0.8, 0.8, 0.8);
+    pointLight.ambient = glm::vec3(0.5,0.4,0.4);
+    pointLight.diffuse = glm::vec3(0.5,0.4,0.4);
+    pointLight.specular = glm::vec3(0.5,0.4,0.4);
 
     pointLight.constant = 1.0f;
     pointLight.linear = 0.09f;
     pointLight.quadratic = 0.032f;
 
     DirectionLight dirlight;
-    dirlight.direction=glm::vec3(0.0,0.0,25.0);
-    dirlight.ambient=glm::vec3 (0.1);
-    dirlight.diffuse=glm::vec3 (0.1);
-    dirlight.specular=glm::vec3(0.1);
+    dirlight.direction=glm::vec3(0.0,25.0,0.0);
+    dirlight.ambient=glm::vec3 (0.05);
+    dirlight.diffuse=glm::vec3 (0.05);
+    dirlight.specular=glm::vec3(0.05);
 
 
 
@@ -304,7 +339,7 @@ int main() {
 
     unsigned int skybox=loadCubemap(faces);
 
-
+    unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/objects/camp_fire/grass.jpg").c_str());
 
 
     // draw in wireframe
@@ -316,7 +351,7 @@ int main() {
     skybox_shader.setInt("skybox",0);
 
     ourShader.use();
-    ourShader.setInt("depthMap",0);
+    ourShader.setInt("depthMap",15);
 
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
@@ -330,10 +365,8 @@ int main() {
         processInput(window);
 
 
-
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model,
-                               programState->backpackPosition);
+        //model = glm::translate(model,programState->backpackPosition);
         model = glm::scale(model, glm::vec3(0.1/*programState->backpackScale*/));
 
 
@@ -344,16 +377,23 @@ int main() {
 
         // deapth cubemap
         float near_plane = 1.0f;
-        float far_plane  = 25.0f;
-        glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, near_plane, far_plane);
+        float far_plane = 25.0f;
+        glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float) SHADOW_WIDTH / (float) SHADOW_HEIGHT,
+                                                near_plane, far_plane);
         std::vector<glm::mat4> shadowTransforms;
         glm::vec3 lightPos = pointLight.position;
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1.0f, 0.0f, 0.0f),
+                                                            glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f),
+                                                            glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 1.0f, 0.0f),
+                                                            glm::vec3(0.0f, 0.0f, 1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, -1.0f, 0.0f),
+                                                            glm::vec3(0.0f, 0.0f, -1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, 1.0f),
+                                                            glm::vec3(0.0f, -1.0f, 0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, -1.0f),
+                                                            glm::vec3(0.0f, -1.0f, 0.0f)));
 //render to cubemap
 
 
@@ -365,7 +405,7 @@ int main() {
             shadow_point.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
         shadow_point.setFloat("far_plane", far_plane);
         shadow_point.setVec3("lightPos", lightPos);
-        shadow_point.setMat4("model",model);
+        shadow_point.setMat4("model", model);
         glDisable(GL_CULL_FACE);
         ourModel.Draw(shadow_point);
         glEnable(GL_CULL_FACE);
@@ -381,7 +421,7 @@ int main() {
 
         // don't forget to enable shader before setting uniforms
         ourShader.use();
-        pointLight.position = /*glm::vec3(4.0,4.0,4.0);*/glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
+        pointLight.position = glm::vec3(1.5,0.1,0.2);//glm::vec3(4.0 * cos(currentFrame), 4.0f,4.0 * sin(currentFrame));
         ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", pointLight.ambient);
         ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -389,13 +429,13 @@ int main() {
         ourShader.setFloat("pointLight.constant", pointLight.constant);
         ourShader.setFloat("pointLight.linear", pointLight.linear);
         ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
-        ourShader.setVec3("dirlight.direction",dirlight.direction);
+        ourShader.setVec3("dirlight.direction", dirlight.direction);
         ourShader.setVec3("dirlight.ambient", dirlight.ambient);
         ourShader.setVec3("dirlight.diffuse", dirlight.diffuse);
         ourShader.setVec3("dirlight.specular", dirlight.specular);
 
         ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("far_plane",far_plane);
+        ourShader.setFloat("far_plane", far_plane);
         ourShader.setFloat("material.shininess", 8.0f);
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
@@ -403,15 +443,71 @@ int main() {
         glm::mat4 view = programState->camera.GetViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
-        ourShader.setInt("shadows",shadows);
+        ourShader.setInt("shadows", shadows);
 
         // render the loaded model
 
         ourShader.setMat4("model", model);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP,depthCubemap);
+        glActiveTexture(GL_TEXTURE15);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
 
         ourModel.Draw(ourShader);
+/*
+        glBindVertexArray(planeVAO);
+        model=glm::mat4(1.0);
+        model=glm::translate(model,glm::vec3(0.0,10,0.0));
+        floor.use();
+        floor.setMat4("model",model);
+        floor.setMat4("view",view);
+        floor.setMat4("projection",projection);
+        floor.setInt("texture1",0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, floorTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        model=glm::translate(model,glm::vec3(0.0,-10,0.0));
+        glBindTexture(GL_TEXTURE_2D,0);
+*/
+        //planine
+
+        model = glm::scale(model, glm::vec3(10.0));
+
+        model = glm::translate(model, glm::vec3(2.5, 0.0, 0.0));
+        ourShader.setMat4("model", model);
+        planina.Draw(ourShader);
+
+        model = glm::translate(model, glm::vec3(0.0, 0.0, 3.0));
+        ourShader.setMat4("model", model);
+        planina.Draw(ourShader);
+
+        model = glm::translate(model, glm::vec3(-2.5, 0.0, 0.0));
+        ourShader.setMat4("model", model);
+        planina.Draw(ourShader);
+
+        model = glm::translate(model, glm::vec3(-2.5, 0.0, 0.0));
+        ourShader.setMat4("model", model);
+        planina.Draw(ourShader);
+
+        model = glm::translate(model, glm::vec3(0.0, 0.0, -3.0));
+        ourShader.setMat4("model", model);
+        planina.Draw(ourShader);
+
+        model = glm::translate(model, glm::vec3(0.0, 0.0, -3.0));
+        ourShader.setMat4("model", model);
+        planina.Draw(ourShader);
+
+        model = glm::translate(model, glm::vec3(2.5, 0.0, 0.0));
+        ourShader.setMat4("model", model);
+        planina.Draw(ourShader);
+
+        model = glm::translate(model, glm::vec3(2.5, 0.0, 0.0));
+        ourShader.setMat4("model", model);
+        planina.Draw(ourShader);
+
+
+
+
+
+
 
         //skybox
         glDepthFunc(GL_LEQUAL);
@@ -591,5 +687,40 @@ unsigned int loadCubemap(vector<std::string> faces)
     stbi_set_flip_vertically_on_load(true);
     return textureID;
 }
+unsigned int loadTexture(char const * path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
 
+    int width, height, nrComponents;
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
+}
 

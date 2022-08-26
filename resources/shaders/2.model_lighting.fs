@@ -70,8 +70,8 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,fl
    // FragColor=vec4(vec3(1.0-shadow)* (diffuse + specular),1.0);
    // FragColor=vec4(vec3(1.0-shadow),1.0);
     //FragColor=vec4(ambient,1.0);
-  if(!shadows) return (ambient +diffuse+specular);
-   else return (ambient + (1.0-shadow)* (diffuse + specular));
+   //return (ambient +diffuse+specular);
+   return (ambient + (1.0-shadow)* (diffuse + specular));
 }
 
 vec3 calculateDirLight(DirectionLight light,vec3 normal,vec3 fragPos,vec3 viewDir){
@@ -99,7 +99,7 @@ float calcShadow(PointLight light,vec3 fragPos){
            float bias = 0.05;
            float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
            // display closestDepth as debug (to visualize depth cubemap)
-          // FragColor = vec4(vec3(closestDepth / far_plane), 1.0);
+           FragColor = vec4(vec3(closestDepth / far_plane), 1.0);
 
            return shadow;
 }
