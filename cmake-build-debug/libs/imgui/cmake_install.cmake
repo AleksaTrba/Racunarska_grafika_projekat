@@ -1,4 +1,4 @@
-# Install script for directory: /home/trba/CLionProjects/project_base/libs/imgui
+# Install script for directory: /home/trba/CLionProjects/Projekat_RG/libs/imgui
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

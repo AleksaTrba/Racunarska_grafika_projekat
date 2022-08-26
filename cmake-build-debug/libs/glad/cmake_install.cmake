@@ -1,4 +1,4 @@
-# Install script for directory: /home/trba/CLionProjects/project_base/libs/glad
+# Install script for directory: /home/trba/CLionProjects/Projekat_RG/libs/glad
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
