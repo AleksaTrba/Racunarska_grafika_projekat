@@ -410,8 +410,12 @@ int main() {
         // -----
         processInput(window);
 
-        pointLight.position = /*glm::vec3(1.5,0.1,0.2);*/glm::vec3(4.0 * cos(currentFrame), 4.0f,
-                                                                   4.0 * sin(currentFrame));
+        pointLight.position = glm::vec3(1.5,0.1,0.2);//glm::vec3(4.0 * cos(currentFrame), 4.0f,
+                                                                 //  4.0 * sin(currentFrame));
+        pointLight.ambient = glm::vec3(0.25*(cos(currentFrame)+1),0.2*(cos(currentFrame)+1),0.2*(cos(currentFrame)+1));
+        pointLight.diffuse = glm::vec3(0.5,0.4,0.4);
+        pointLight.specular = glm::vec3(0.5,0.4,0.4);
+
         glm::mat4 model = glm::mat4(1.0f);
         //model = glm::translate(model,programState->backpackPosition);
         model = glm::scale(model, glm::vec3(0.1/*programState->backpackScale*/));
