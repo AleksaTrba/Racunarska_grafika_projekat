@@ -70,8 +70,8 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir,fl
    // FragColor=vec4(vec3(1.0-shadow)* (diffuse + specular),1.0);
    // FragColor=vec4(vec3(1.0-shadow),1.0);
     //FragColor=vec4(ambient,1.0);
-   //return (ambient +diffuse+specular);
-   return (ambient + (1.0-shadow)* (diffuse + specular));
+   if(shadows)return (ambient +diffuse+specular);
+   else return (ambient + (1.0-shadow)* (diffuse + specular));
 }
 
 vec3 calculateDirLight(DirectionLight light,vec3 normal,vec3 fragPos,vec3 viewDir){

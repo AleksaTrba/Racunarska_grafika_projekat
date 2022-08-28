@@ -183,7 +183,7 @@ int main() {
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
     Shader skybox_shader("resources/shaders/skybox.vs","resources/shaders/skybox.fs");
     Shader shadow_point("resources/shaders/shadow.vs","resources/shaders/shadow.fs","resources/shaders/geometryshader.gs");
-    Shader floor("resources/shaders/floor.vs","resources/shaders/floor.fs");
+    Shader floor("resources/shaders/grass.vs","resources/shaders/grass.fs");
 
 
     float skyboxVertices[] = {
@@ -246,13 +246,13 @@ int main() {
 
     float planeVertices[] = {
             // positions          // texture Coords
-            5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
-            -5.0f, -0.5f,  5.0f,  0.0f, 0.0f,
-            -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
+            5.0f, 0.001f,  5.0f,  2.0f, 0.0f,
+            -5.0f, 0.001f,  5.0f,  0.0f, 0.0f,
+            -5.0f, 0.001f, -5.0f,  0.0f, 2.0f,
 
-            5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
-            -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
-            5.0f, -0.5f, -5.0f,  2.0f, 2.0f
+            5.0f, 0.001f,  5.0f,  2.0f, 0.0f,
+            -5.0f, 0.001f, -5.0f,  0.0f, 2.0f,
+            5.0f, 0.001f, -5.0f,  2.0f, 2.0f
     };
 
     unsigned int planeVAO, planeVBO;
@@ -269,6 +269,36 @@ int main() {
 
 
     //end plane
+
+    //trava
+    //TODO izracunaj normale
+    float transparentVertices[] = {
+            // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+            0.0f,  -0.5f,  0.0f,  0.0f,  0.0f,0.0,0.0,1.0,
+            0.0f, 0.5f,  0.0f,  0.0f,  1.0f,0.0,0.0,1.0,
+            1.0f, 0.5f,  0.0f,  1.0f,  1.0f,0.0,0.0,1.0,
+
+            0.0f,  -0.5f,  0.0f,  0.0f,  0.0f,0.0,0.0,1.0,
+            1.0f, 0.5f,  0.0f,  1.0f,  1.0f,0.0,0.0,1.0,
+            1.0f,  -0.5f,  0.0f,  1.0f,  0.0f,0.0,0.0,1.0
+    };
+    unsigned int transparentVAO, transparentVBO;
+    glGenVertexArrays(1, &transparentVAO);
+    glGenBuffers(1, &transparentVBO);
+    glBindVertexArray(transparentVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2,3,GL_FLOAT,GL_FALSE,8 * sizeof(float),(void*)(5*sizeof(float)));
+    glBindVertexArray(0);
+
+    //end trava
+
+
 
     // load models
     // -----------
@@ -326,6 +356,21 @@ int main() {
 
 
 
+    vector<glm::vec3> transacije{
+        glm::vec3(10.0,0.5,0.0),
+        glm::vec3(-9.0,0.5,0.0),
+        glm::vec3(-11.0,0.5,10.0),
+        glm::vec3(-5.0,0.5,-12.0),
+        glm::vec3(0.0,0.5,14.0),
+        glm::vec3(5.0,0.5,-7.0),
+        glm::vec3(6.0,0.5,8.0),
+        glm::vec3(4.0,0.5,13.5),
+        glm::vec3(10.5,0.5,-14.5),
+        glm::vec3(-10.5,0.5,-12.5),
+        glm::vec3(-15.5,0.5,-16.5),
+        glm::vec3(17.5,0.5,-12.5)
+    };
+
 
     vector<std::string> faces
     {
@@ -341,6 +386,7 @@ int main() {
 
     unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/objects/camp_fire/grass.jpg").c_str());
 
+    unsigned int grassTexture= loadTexture("resources/textures/grass.png");
 
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -364,11 +410,14 @@ int main() {
         // -----
         processInput(window);
 
-
+        pointLight.position = /*glm::vec3(1.5,0.1,0.2);*/glm::vec3(4.0 * cos(currentFrame), 4.0f,
+                                                                   4.0 * sin(currentFrame));
         glm::mat4 model = glm::mat4(1.0f);
         //model = glm::translate(model,programState->backpackPosition);
         model = glm::scale(model, glm::vec3(0.1/*programState->backpackScale*/));
-
+        glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
+                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 view = programState->camera.GetViewMatrix();
 
 
 
@@ -376,8 +425,8 @@ int main() {
 
 
         // deapth cubemap
-        float near_plane = 1.0f;
-        float far_plane = 25.0f;
+        float near_plane = 0.1f;
+        float far_plane = 100.0f;
         glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float) SHADOW_WIDTH / (float) SHADOW_HEIGHT,
                                                 near_plane, far_plane);
         std::vector<glm::mat4> shadowTransforms;
@@ -396,7 +445,7 @@ int main() {
                                                             glm::vec3(0.0f, -1.0f, 0.0f)));
 //render to cubemap
 
-
+        glm::mat4 pomocna_model_matrica = model;
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
         glClear(GL_DEPTH_BUFFER_BIT);
@@ -406,12 +455,59 @@ int main() {
         shadow_point.setFloat("far_plane", far_plane);
         shadow_point.setVec3("lightPos", lightPos);
         shadow_point.setMat4("model", model);
+        //shadow_point.setVec3("lightPos", lightPos/glm::vec3(0.1));
         glDisable(GL_CULL_FACE);
         ourModel.Draw(shadow_point);
+
+
+        model = glm::mat4(1.0f);//glm::scale(model, glm::vec3(10.0));
+        shadow_point.use();
+        shadow_point.setVec3("lightPos", lightPos/glm::vec3(0.1));
+        model = glm::translate(model, glm::vec3(2.5, 0.0, 0.0));
+        shadow_point.setMat4("model", model);
+        planina.Draw(shadow_point);
+
+        shadow_point.use();
+        model = glm::translate(model, glm::vec3(0.0, 0.0, 3.0));
+        shadow_point.setMat4("model", model);
+        planina.Draw(shadow_point);
+
+        shadow_point.use();
+
+        model = glm::translate(model, glm::vec3(-2.5, 0.0, 0.0));
+        shadow_point.setMat4("model", model);
+        planina.Draw(shadow_point);
+        shadow_point.use();
+        model = glm::translate(model, glm::vec3(-2.5, 0.0, 0.0));
+        shadow_point.setMat4("model", model);
+        planina.Draw(shadow_point);
+        shadow_point.use();
+        model = glm::translate(model, glm::vec3(0.0, 0.0, -3.0));
+        shadow_point.setMat4("model", model);
+        planina.Draw(shadow_point);
+        shadow_point.use();
+        model = glm::translate(model, glm::vec3(0.0, 0.0, -3.0));
+        shadow_point.setMat4("model", model);
+        planina.Draw(shadow_point);
+        shadow_point.use();
+        model = glm::translate(model, glm::vec3(2.5, 0.0, 0.0));
+        shadow_point.setMat4("model", model);
+        planina.Draw(shadow_point);
+        shadow_point.use();
+        model = glm::translate(model, glm::vec3(2.5, 0.0, 0.0));
+        shadow_point.setMat4("model", model);
+        planina.Draw(shadow_point);
+
+        glBindVertexArray(planeVAO);
+        shadow_point.use();
+        shadow_point.setMat4("model", pomocna_model_matrica);
+        shadow_point.setVec3("lightPos",lightPos);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
         glEnable(GL_CULL_FACE);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-
+        model = pomocna_model_matrica;
 
         // render
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
@@ -421,7 +517,7 @@ int main() {
 
         // don't forget to enable shader before setting uniforms
         ourShader.use();
-        pointLight.position = glm::vec3(1.5,0.1,0.2);//glm::vec3(4.0 * cos(currentFrame), 4.0f,4.0 * sin(currentFrame));
+
         ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", pointLight.ambient);
         ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -438,9 +534,7 @@ int main() {
         ourShader.setFloat("far_plane", far_plane);
         ourShader.setFloat("material.shininess", 8.0f);
         // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
-                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
-        glm::mat4 view = programState->camera.GetViewMatrix();
+
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
         ourShader.setInt("shadows", shadows);
@@ -452,61 +546,120 @@ int main() {
         glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
 
         ourModel.Draw(ourShader);
-/*
-        glBindVertexArray(planeVAO);
-        model=glm::mat4(1.0);
-        model=glm::translate(model,glm::vec3(0.0,10,0.0));
-        floor.use();
-        floor.setMat4("model",model);
-        floor.setMat4("view",view);
-        floor.setMat4("projection",projection);
-        floor.setInt("texture1",0);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, floorTexture);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        model=glm::translate(model,glm::vec3(0.0,-10,0.0));
-        glBindTexture(GL_TEXTURE_2D,0);
-*/
+        glActiveTexture(GL_TEXTURE15);
+
+
+
+
         //planine
 
-        model = glm::scale(model, glm::vec3(10.0));
+        model =glm::mat4(1.0f); //glm::scale(model, glm::vec3(10.0));
 
         model = glm::translate(model, glm::vec3(2.5, 0.0, 0.0));
         ourShader.setMat4("model", model);
+        ourShader.setMat4("view", view);
+        ourShader.setMat4("projection", projection);
         planina.Draw(ourShader);
 
         model = glm::translate(model, glm::vec3(0.0, 0.0, 3.0));
         ourShader.setMat4("model", model);
+        ourShader.setMat4("view", view);
+        ourShader.setMat4("projection", projection);
         planina.Draw(ourShader);
 
         model = glm::translate(model, glm::vec3(-2.5, 0.0, 0.0));
         ourShader.setMat4("model", model);
+        ourShader.setMat4("view", view);
+        ourShader.setMat4("projection", projection);
         planina.Draw(ourShader);
 
         model = glm::translate(model, glm::vec3(-2.5, 0.0, 0.0));
         ourShader.setMat4("model", model);
+        ourShader.setMat4("view", view);
+        ourShader.setMat4("projection", projection);
         planina.Draw(ourShader);
 
         model = glm::translate(model, glm::vec3(0.0, 0.0, -3.0));
         ourShader.setMat4("model", model);
+        ourShader.setMat4("view", view);
+        ourShader.setMat4("projection", projection);
         planina.Draw(ourShader);
 
         model = glm::translate(model, glm::vec3(0.0, 0.0, -3.0));
         ourShader.setMat4("model", model);
+        ourShader.setMat4("view", view);
+        ourShader.setMat4("projection", projection);
         planina.Draw(ourShader);
 
         model = glm::translate(model, glm::vec3(2.5, 0.0, 0.0));
         ourShader.setMat4("model", model);
+        ourShader.setMat4("view", view);
+        ourShader.setMat4("projection", projection);
         planina.Draw(ourShader);
 
         model = glm::translate(model, glm::vec3(2.5, 0.0, 0.0));
         ourShader.setMat4("model", model);
+        ourShader.setMat4("view", view);
+        ourShader.setMat4("projection", projection);
         planina.Draw(ourShader);
 
 
+//pod
+        glCullFace(GL_FRONT);
+        glBindVertexArray(planeVAO);
+        //model1=glm::mat4(1.0);
+        // model=glm::translate(model,glm::vec3(0.0,10,0.0));
+        ourShader.use();
+        ourShader.setMat4("model", pomocna_model_matrica);
+        ourShader.setMat4("view", view);
+        ourShader.setMat4("projection", projection);
+        ourShader.setInt("material.texture_diffuse1",0);
+         /*
+
+          floor.setVec3("dirlight.direction", dirlight.direction);
+          floor.setVec3("dirlight.ambient", dirlight.ambient);
+          floor.setVec3("dirlight.diffuse", dirlight.diffuse);
+          floor.setVec3("dirlight.specular", dirlight.specular);*/
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, floorTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        //model=glm::translate(model,glm::vec3(0.0,-10,0.0));
+        //glBindTexture(GL_TEXTURE_2D,0);
+        //glActiveTexture(GL_TEXTURE0);
+        glCullFace(GL_BACK);
+
+//kraj poda
+
+//trava
+        glDisable(GL_CULL_FACE);
+        floor.use();
+        glBindVertexArray(transparentVAO);
+        glBindTexture(GL_TEXTURE_2D, grassTexture);
+        floor.setVec3("pointLight.position", pointLight.position);
+        floor.setVec3("pointLight.ambient", pointLight.ambient);
+        floor.setVec3("pointLight.diffuse", pointLight.diffuse);
+        floor.setVec3("pointLight.specular", pointLight.specular);
+        floor.setFloat("pointLight.constant", pointLight.constant);
+        floor.setFloat("pointLight.linear", pointLight.linear);
+        floor.setFloat("pointLight.quadratic", pointLight.quadratic);
+        floor.setVec3("viewPosition", programState->camera.Position);
+        glm::mat4 trava_model;
+        for (unsigned int i = 0; i < transacije.size(); i++) {
+            trava_model = glm::mat4(1.0);
+            trava_model = glm::scale(trava_model, glm::vec3(0.1));
+            trava_model = glm::translate(trava_model, transacije[i]);
+            if(i%2==0){
+                trava_model=glm::rotate(trava_model,glm::radians(15.0f*(i%12)),glm::vec3(0.0,1.0,0.0));
+            }
+            floor.setMat4("model", trava_model);
+            floor.setMat4("view", view);
+            floor.setMat4("projection", projection);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
 
 
-
+        glEnable(GL_CULL_FACE);
+//kraj trave
 
 
         //skybox
