@@ -17,5 +17,5 @@ Projekat iz računarske grafike, korišćen skelet sa `https://github.com/matf-r
 1. [Mountain 3D Model by shaiksha35](https://free3d.com/3d-model/mountain-6839.html)
 2. [ Campfire 3D Model by animatedheaven](https://free3d.com/3d-model/campfire-94559.html)
 
-#Primer rada projekta
+# Primer rada projekta
 https://youtu.be/prbWN5zXvAY
