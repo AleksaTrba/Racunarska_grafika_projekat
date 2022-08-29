@@ -1,4 +1,4 @@
-# moonlit_retreat
+# Projekat RG
 Projekat iz računarske grafike, korišćen skelet sa `https://github.com/matf-racunarska-grafika/project_base`
 
 #Uputstvo
